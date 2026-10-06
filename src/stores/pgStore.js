@@ -66,12 +66,15 @@ function createPgStore({ connectionString, sslCa }) {
 
     async listQuizzes() {
       const { rows } = await pool.query(`
-        SELECT q.id, q.title, q.updated_at, count(qs.position)::int AS count
+        SELECT q.id, q.title, q.updated_at, count(qs.position)::int AS count,
+               coalesce(sum(qs.time_sec), 0)::int AS total_sec
         FROM quizzes q
         LEFT JOIN questions qs ON qs.quiz_id = q.id
         GROUP BY q.id
         ORDER BY q.updated_at DESC`);
-      return rows.map((r) => ({ id: r.id, title: r.title, count: r.count, updatedAt: r.updated_at.toISOString() }));
+      return rows.map((r) => ({
+        id: r.id, title: r.title, count: r.count, totalSec: r.total_sec, updatedAt: r.updated_at.toISOString(),
+      }));
     },
 
     async readQuiz(id) {

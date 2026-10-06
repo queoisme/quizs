@@ -114,7 +114,7 @@ function registerSockets(io, { auth }) {
       const reply = typeof ack === 'function' ? ack : noop;
       const room = hostRoom(reply);
       if (!room) return;
-      closeRoom(room, 'Chủ phòng đã đóng phòng');
+      closeRoom(room, room.state === 'lobby' ? 'Chủ phòng đã huỷ phòng' : 'Chủ phòng đã đóng phòng');
       socket.data.role = undefined;
       socket.data.pin = undefined;
       reply({ ok: true });

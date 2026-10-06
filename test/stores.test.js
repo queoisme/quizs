@@ -57,6 +57,7 @@ function contract(name, makeStore, cleanup) {
 
     const list = await store.listQuizzes();
     assert.deepEqual(list.map((q) => [q.title, q.count]), [['Cũ nhưng vừa sửa', 2], ['Mới', 4]]);
+    assert.deepEqual(list.map((q) => q.totalSec), [10 + 11, 10 + 11 + 12 + 13]);
   });
 
   test(`${name}: id lạ hoặc không tồn tại thì trả về null/false, không lỗi`, async (t) => {

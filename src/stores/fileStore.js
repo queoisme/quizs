@@ -40,7 +40,13 @@ function createFileStore({ dir }) {
       for (const f of files) {
         try {
           const q = JSON.parse(await fs.readFile(path.join(dir, f), 'utf8'));
-          out.push({ id: q.id, title: q.title, count: q.questions.length, updatedAt: q.updatedAt });
+          out.push({
+            id: q.id,
+            title: q.title,
+            count: q.questions.length,
+            totalSec: q.questions.reduce((sum, x) => sum + x.time, 0),
+            updatedAt: q.updatedAt,
+          });
         } catch (err) {
           console.warn(`Bỏ qua file câu hỏi lỗi ${f}: ${err.message}`);
         }

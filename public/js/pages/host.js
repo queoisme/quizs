@@ -36,50 +36,132 @@ function showRoom(res) {
   $('#lan-hint').classList.toggle('hidden', !/^http:\/\/(\d+\.){3}\d+/.test(res.url));
 }
 
+// ---------- Chọn bộ câu hỏi ----------
+
+const STEP_OVERHEAD_SEC = 9; // hiện đáp án + bảng xếp hạng giữa các câu
+let quizzes = [];
+let selectedId = params.get('quiz');
+const previews = new Map(); // id -> bộ câu hỏi đầy đủ (đã tải)
+
+/* Bỏ dấu để tìm "chu nghia" vẫn ra "Chủ nghĩa" */
+const fold = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/gi, 'd').toLowerCase();
+
+const fmtDuration = (sec) => (sec < 90 ? `${sec} giây` : `~${Math.round(sec / 60)} phút`);
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+  const days = Math.round((day(new Date()) - day(d)) / 864e5);
+  if (days <= 0) return 'hôm nay';
+  if (days === 1) return 'hôm qua';
+  if (days < 7) return `${days} ngày trước`;
+  return d.toLocaleDateString('vi-VN');
+}
+
 async function loadQuizzes() {
-  const box = $('#quiz-list');
-  let list;
   try {
     const res = await fetch('/api/quizzes');
     if (res.status === 401) {
       location.href = loginUrl();
       return;
     }
-    list = await res.json();
+    quizzes = await res.json();
   } catch {
     $('#setup-error').textContent = 'Không tải được danh sách bộ câu hỏi';
     return;
   }
-  box.replaceChildren();
-  if (!list.length) {
-    const p = el('p', 'muted', 'Chưa có bộ câu hỏi nào. ');
+  $('#picker-tools').classList.toggle('hidden', quizzes.length === 0);
+  if (!quizzes.some((q) => q.id === selectedId)) selectedId = quizzes[0]?.id ?? null; // mới sửa gần nhất
+  renderQuizList();
+  if (selectedId) selectQuiz(selectedId);
+  else renderPreview(null);
+}
+
+function renderQuizList() {
+  const box = $('#quiz-list');
+  const term = fold($('#quiz-search').value.trim());
+  const sorters = {
+    recent: (a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)),
+    name: (a, b) => a.title.localeCompare(b.title, 'vi'),
+    count: (a, b) => b.count - a.count,
+  };
+  const shown = quizzes.filter((q) => !term || fold(q.title).includes(term)).sort(sorters[$('#quiz-sort').value]);
+  $('#quiz-count').textContent = term ? `${shown.length}/${quizzes.length} bộ` : `${quizzes.length} bộ`;
+
+  box.replaceChildren(...shown.map((q) => {
+    const card = el('label', `quiz-card${q.id === selectedId ? ' selected' : ''}`);
+    const radio = el('input');
+    Object.assign(radio, { type: 'radio', name: 'quiz', value: q.id, checked: q.id === selectedId });
+    radio.addEventListener('change', () => selectQuiz(q.id));
+    card.append(
+      radio,
+      el('strong', 'qc-title', q.title),
+      el('span', 'qc-meta', `${q.count} câu · ${fmtDuration(q.totalSec + q.count * STEP_OVERHEAD_SEC)}`),
+      el('span', 'qc-date', `Sửa ${fmtDate(q.updatedAt)}`),
+    );
+    return card;
+  }));
+
+  if (!quizzes.length) {
+    const p = el('p', 'empty-note muted', 'Chưa có bộ câu hỏi nào. ');
     const a = el('a', '', 'Tạo bộ đầu tiên');
     a.href = '/editor';
     p.append(a);
     box.append(p);
-    return;
+  } else if (!shown.length) {
+    box.append(el('p', 'empty-note muted', `Không có bộ nào khớp “${$('#quiz-search').value.trim()}”`));
   }
-  const want = params.get('quiz');
-  for (const q of list) {
-    const label = el('label', 'quiz-item');
-    const radio = el('input');
-    radio.type = 'radio';
-    radio.name = 'quiz';
-    radio.value = q.id;
-    radio.checked = q.id === want;
-    label.append(radio, el('span', 'qt', q.title), el('span', 'muted', `${q.count} câu`));
-    box.append(label);
-  }
-  if (!box.querySelector('input:checked')) box.querySelector('input').checked = true;
-  $('#create-room').disabled = false;
 }
 
+async function selectQuiz(id) {
+  selectedId = id;
+  $('#create-room').disabled = false;
+  for (const card of document.querySelectorAll('.quiz-card')) {
+    card.classList.toggle('selected', card.querySelector('input').value === id);
+  }
+  if (!previews.has(id)) {
+    renderPreview(undefined);
+    try {
+      const res = await fetch(`/api/quizzes/${id}`);
+      if (res.ok) previews.set(id, await res.json());
+    } catch { /* hiện lỗi bên dưới */ }
+  }
+  if (selectedId === id) renderPreview(previews.get(id) ?? null); // bỏ qua nếu đã chọn bộ khác trong lúc tải
+}
+
+/* quiz: object = hiện xem trước; undefined = đang tải; null = không có gì để xem */
+function renderPreview(quiz) {
+  const box = $('#quiz-preview');
+  if (quiz === undefined) {
+    box.replaceChildren(el('p', 'muted', 'Đang tải…'));
+    return;
+  }
+  if (!quiz) {
+    box.replaceChildren(el('p', 'muted', quizzes.length ? 'Không tải được bộ câu hỏi này.' : 'Chọn một bộ câu hỏi để xem trước.'));
+    return;
+  }
+  const ol = el('ol', 'qp-list');
+  for (const q of quiz.questions.slice(0, 3)) ol.append(el('li', '', q.question));
+  const more = quiz.questions.length - 3;
+  const edit = el('a', 'btn ghost', '✎ Sửa bộ này');
+  edit.href = `/editor?id=${quiz.id}`;
+  box.replaceChildren(
+    el('span', 'qp-label muted', 'Xem trước'),
+    el('h3', 'qp-title', quiz.title),
+    ol,
+    ...(more > 0 ? [el('p', 'muted qp-more', `…và ${more} câu nữa`)] : []),
+    edit,
+  );
+}
+
+$('#quiz-search').addEventListener('input', renderQuizList);
+$('#quiz-sort').addEventListener('change', renderQuizList);
+
 $('#create-room').addEventListener('click', () => {
-  const quizId = document.querySelector('input[name=quiz]:checked')?.value;
   const difficulty = document.querySelector('input[name=difficulty]:checked')?.value;
-  if (!quizId) return;
+  if (!selectedId) return;
   $('#create-room').disabled = true;
-  socket.emit('host:create', { quizId, difficulty }, (res) => {
+  socket.emit('host:create', { quizId: selectedId, difficulty }, (res) => {
     $('#create-room').disabled = false;
     if (res.login) {
       location.href = loginUrl();
@@ -89,17 +171,21 @@ $('#create-room').addEventListener('click', () => {
       $('#setup-error').textContent = res.error;
       return;
     }
+    $('#setup-error').textContent = '';
     showRoom(res);
     bar.message('');
     showScreen('lobby');
   });
 });
 
+// ---------- Sảnh chờ ----------
+
 socket.on('roster', (list) => {
   const box = $('#players');
   box.replaceChildren(...list.map((p) => {
-    const chip = el('span', 'chip', p.name);
-    chip.style.background = p.color;
+    const chip = el('span', 'chip');
+    chip.style.borderColor = p.color;
+    chip.append(characterSvg(p.color, { size: 22 }), el('span', '', p.name));
     return chip;
   }));
   $('#player-count').textContent = list.length;
@@ -116,6 +202,20 @@ $('#start').addEventListener('click', () => {
     } else {
       $('#lobby-error').textContent = '';
     }
+  });
+});
+
+$('#cancel-room').addEventListener('click', () => {
+  const n = Number($('#player-count').textContent);
+  if (n > 0 && !confirm(`Huỷ phòng? ${n} người chơi sẽ bị đưa ra ngoài.`)) return;
+  socket.emit('host:leave', null, () => {
+    saveSession(null);
+    room = null;
+    $('#players').replaceChildren();
+    $('#player-count').textContent = '0';
+    $('#lobby-error').textContent = '';
+    showScreen('setup');
+    loadQuizzes();
   });
 });
 

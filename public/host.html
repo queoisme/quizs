@@ -13,25 +13,47 @@
 </head>
 <body>
   <section id="setup" class="screen center">
-    <div class="card wide">
-      <h1>Tổ chức trò chơi</h1>
-      <p class="muted" style="margin:0">Chọn bộ câu hỏi rồi tạo phòng. Người chơi quét mã QR để tham gia.</p>
-      <div id="quiz-list" class="quiz-list"></div>
-      <div class="difficulty">
-        <strong>Thử thách trong trận</strong>
-        <span class="muted">☄️ thiên thạch · 🌬️ gió · 🧊 sàn băng · 🛡️ khiên</span>
-        <div class="seg" role="radiogroup">
-          <label><input type="radio" name="difficulty" value="off"><span>Tắt</span></label>
-          <label><input type="radio" name="difficulty" value="easy"><span>Dễ</span></label>
-          <label><input type="radio" name="difficulty" value="medium" checked><span>Vừa</span></label>
-          <label><input type="radio" name="difficulty" value="hard"><span>Khó</span></label>
+    <div class="card setup-card">
+      <div class="row setup-head">
+        <div>
+          <h1>Tổ chức trò chơi</h1>
+          <p class="muted" style="margin:0">Chọn bộ câu hỏi rồi tạo phòng. Người chơi quét mã QR để tham gia.</p>
+        </div>
+        <div class="row">
+          <a href="/editor" class="btn ghost">✎ Soạn câu hỏi</a>
+          <button id="logout" class="btn ghost" type="button">Đăng xuất</button>
         </div>
       </div>
-      <p id="setup-error" class="error"></p>
-      <div class="row">
-        <button id="create-room" class="btn primary big" disabled>Tạo phòng</button>
-        <a href="/editor" class="btn ghost">✎ Soạn câu hỏi</a>
-        <button id="logout" class="btn ghost" type="button">Đăng xuất</button>
+
+      <div id="picker-tools" class="picker-tools">
+        <input id="quiz-search" type="search" placeholder="🔍 Tìm bộ câu hỏi (gõ không dấu cũng được)…" autocomplete="off">
+        <select id="quiz-sort" aria-label="Sắp xếp">
+          <option value="recent">Mới sửa gần nhất</option>
+          <option value="name">Tên A → Z</option>
+          <option value="count">Nhiều câu nhất</option>
+        </select>
+        <span id="quiz-count" class="muted"></span>
+      </div>
+      <div class="picker">
+        <div id="quiz-list" class="quiz-grid" role="radiogroup" aria-label="Bộ câu hỏi"></div>
+        <aside id="quiz-preview" class="quiz-preview"></aside>
+      </div>
+
+      <div class="setup-foot">
+        <div class="difficulty">
+          <strong>Thử thách trong trận</strong>
+          <span class="muted">☄️ thiên thạch · 🌬️ gió · 🧊 sàn băng · 🛡️ khiên</span>
+          <div class="seg" role="radiogroup">
+            <label><input type="radio" name="difficulty" value="off"><span>Tắt</span></label>
+            <label><input type="radio" name="difficulty" value="easy"><span>Dễ</span></label>
+            <label><input type="radio" name="difficulty" value="medium" checked><span>Vừa</span></label>
+            <label><input type="radio" name="difficulty" value="hard"><span>Khó</span></label>
+          </div>
+        </div>
+        <div class="create-box">
+          <p id="setup-error" class="error"></p>
+          <button id="create-room" class="btn primary big" disabled>Tạo phòng ▶</button>
+        </div>
       </div>
     </div>
   </section>
@@ -53,7 +75,10 @@
         </div>
         <div class="row">
           <h2><span id="player-count">0</span> người chơi</h2>
-          <button id="start" class="btn primary big" disabled>Bắt đầu ▶</button>
+          <div class="row">
+            <button id="cancel-room" class="btn ghost" type="button">✕ Huỷ phòng</button>
+            <button id="start" class="btn primary big" disabled>Bắt đầu ▶</button>
+          </div>
         </div>
         <p id="lobby-error" class="error"></p>
         <div id="players" class="players"></div>
