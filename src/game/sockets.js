@@ -169,6 +169,7 @@ function registerSockets(io, { auth }) {
       socket.data.playerId = p.id;
       ack({
         ok: true, id: p.id, token: p.token, color: p.color, x: p.x, score: p.score,
+        rank: room.state === 'lobby' ? null : room.rankOf(p.id), playerCount: room.players.size,
         title: room.title, phase: room.snapshot(),
       });
     });

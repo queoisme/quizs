@@ -58,6 +58,14 @@ function setScore(score) {
   $('#my-score').textContent = score;
 }
 
+/* Thứ hạng của mình luôn hiện trên thanh trên cùng; cập nhật sau mỗi câu */
+function setRank(rank, total) {
+  $('#live-rank').classList.toggle('hidden', !rank);
+  if (!rank) return;
+  $('#live-rank-n').textContent = `#${rank}`;
+  $('#live-rank-total').textContent = total;
+}
+
 function banner(html, cls = '') {
   const b = $('#banner');
   b.className = `banner ${cls}`;
@@ -74,6 +82,7 @@ function enterRoom(res) {
   lastKey = '';
   handled = new Set();
   setScore(res.score);
+  setRank(res.rank, res.playerCount);
   showScreen('game');
   applyPhase(res.phase);
 }
@@ -101,6 +110,7 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
   if (p.phase === 'lobby') {
     hideBanner();
     setScore(0);
+    setRank(null);
     bar.message(p.difficulty && p.difficulty !== 'off'
       ? 'Đã vào phòng! Chờ chủ phòng bắt đầu… Cẩn thận thiên thạch ☄️, gió 🌬️ và sàn băng 🧊, nhặt khiên 🛡️ để đỡ đòn!'
       : 'Đã vào phòng! Chờ chủ phòng bắt đầu… Thử chạy nhảy cho quen tay nhé 🎮');
@@ -114,6 +124,7 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
   } else if (p.phase === 'reveal') {
     showScreen('game');
     const r = p.results[arena.selfId];
+    if (r) setRank(r.rank, p.playerCount);
     const answer = `${LETTERS[p.correct]}. ${p.answers[p.correct]}`;
     if (!r) {
       banner([document.createTextNode(`Đáp án đúng: ${answer}`)]);
@@ -124,12 +135,6 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
       setScore(r.score);
       banner([document.createTextNode('✘ Sai rồi!'), el('small', '', `Đáp án đúng: ${answer}`)], 'bad');
     }
-  } else if (p.phase === 'standings') {
-    const mine = p.list.find((x) => x.id === arena.selfId);
-    if (mine) setScore(mine.score);
-    $('#st-progress').textContent = `Sau câu ${p.index + 1}/${p.total}`;
-    renderStandings($('#standings-list'), p.list, { meId: arena.selfId, limit: 5 });
-    showScreen('standings');
   } else if (p.phase === 'ended') {
     const rank = p.leaderboard.findIndex((x) => x.id === arena.selfId);
     const myRank = $('#my-rank');

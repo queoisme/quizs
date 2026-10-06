@@ -38,7 +38,7 @@ function showRoom(res) {
 
 // ---------- Chọn bộ câu hỏi ----------
 
-const STEP_OVERHEAD_SEC = 9; // hiện đáp án + bảng xếp hạng giữa các câu
+const STEP_OVERHEAD_SEC = 4; // hiện đáp án giữa các câu
 let quizzes = [];
 let selectedId = params.get('quiz');
 const previews = new Map(); // id -> bộ câu hỏi đầy đủ (đã tải)
@@ -252,15 +252,50 @@ $('#skip-btn').addEventListener('click', skip);
 $('#end-btn').addEventListener('click', () => {
   if (confirm('Kết thúc trận ngay và công bố kết quả? Câu đang dở sẽ không được tính điểm.')) hostAction('host:end');
 });
+// Bảng xếp hạng chỉ mở trên màn hình host, không ảnh hưởng trận đấu
+let lastReveal = null;
+const lbOpen = () => !$('#lb-overlay').classList.contains('hidden');
+
+function renderLeaderboardOverlay() {
+  const box = $('#standings-list');
+  if (!lastReveal) {
+    $('#st-progress').textContent = '';
+    box.className = '';
+    box.style.height = '';
+    box.replaceChildren(el('p', 'muted', 'Chưa có câu nào kết thúc.'));
+    return;
+  }
+  $('#st-progress').textContent = `Sau câu ${lastReveal.index + 1}/${lastReveal.total}`;
+  renderStandings(box, lastReveal.standings, { limit: lastReveal.standings.length });
+}
+
+function toggleLeaderboard(open = !lbOpen()) {
+  $('#lb-overlay').classList.toggle('hidden', !open);
+  $('#lb-btn').classList.toggle('resume', open);
+  if (open) renderLeaderboardOverlay();
+}
+
+$('#lb-btn').addEventListener('click', () => toggleLeaderboard());
+$('#lb-close').addEventListener('click', () => toggleLeaderboard(false));
+$('#lb-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) toggleLeaderboard(false); // bấm ra ngoài thì đóng
+});
+
 addEventListener('keydown', (e) => {
   if ($('#host-controls').classList.contains('hidden') || e.target.matches('input, textarea')) return;
   if (e.code === 'KeyP') togglePause();
   else if (e.code === 'KeyN') skip();
+  else if (e.code === 'KeyL') toggleLeaderboard();
+  else if (e.code === 'Escape' && lbOpen()) toggleLeaderboard(false);
 });
 
 const applyPhase = bindGame(socket, arena, bar, (p) => {
   const b = $('#banner');
-  const playing = p.phase === 'question' || p.phase === 'reveal' || p.phase === 'standings';
+  const playing = p.phase === 'question' || p.phase === 'reveal';
+  if (!playing) {
+    lastReveal = null;
+    toggleLeaderboard(false);
+  }
   $('#host-controls').classList.toggle('hidden', !playing);
   if (p.phase === 'lobby') {
     b.classList.add('hidden');
@@ -276,10 +311,8 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
       el('small', '', `${p.stats.right}/${p.stats.total} người trả lời đúng${p.isLast ? ' · Câu cuối!' : ''}`),
     );
     showScreen('game');
-  } else if (p.phase === 'standings') {
-    $('#st-progress').textContent = `Sau câu ${p.index + 1}/${p.total}`;
-    renderStandings($('#standings-list'), p.list, { limit: 10 });
-    showScreen('standings');
+    lastReveal = p;
+    if (lbOpen()) renderLeaderboardOverlay(); // đang mở thì cập nhật luôn
   } else if (p.phase === 'ended') {
     const actions = $('#end-actions');
     actions.classList.add('reveal-later');

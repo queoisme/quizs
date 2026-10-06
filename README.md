@@ -84,9 +84,10 @@ test/                     npm test (thêm TEST_DATABASE_URL=... để test cả 
 
 ## Trong trận
 
-- Mỗi câu: **câu hỏi → đáp án đúng (4 giây) → bảng xếp hạng tạm thời (5 giây)** có ▲▼ thay đổi hạng; người bằng điểm thì đồng hạng.
+- Mỗi câu: **câu hỏi → đáp án đúng (4 giây) → câu tiếp**. Người chơi luôn thấy **thứ hạng của mình** trên thanh trên cùng (cập nhật sau mỗi câu, bằng điểm thì đồng hạng).
 - Câu cuối đi thẳng tới màn **công bố kết quả**: hạng thấp hiện trước, rồi bục hạng 3 → 2 → 1, kèm confetti.
 - Host điều khiển trận ở góc dưới bên phải:
+  - **🏆 Xếp hạng** (phím **L**): bảng xếp hạng có ▲▼ đổi hạng, **chỉ hiện trên màn hình host**, trận đấu vẫn chạy bình thường.
   - **⏸ Tạm dừng / ▶ Tiếp tục** (phím **P**): đồng hồ, thử thách và nhân vật đứng yên; thời gian dừng không tính vào điểm tốc độ.
   - **⏭ Bỏ qua** (phím **N**): câu hỏi → hiện đáp án ngay; đáp án / bảng xếp hạng → sang bước tiếp.
   - **⏹ Kết thúc**: công bố kết quả ngay, câu đang dở không tính điểm.

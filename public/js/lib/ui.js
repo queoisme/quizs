@@ -266,9 +266,9 @@ function renderStandings(box, list, { meId, limit = 10 } = {}) {
     for (const { row, rank, score, p, i } of items) {
       row.style.transform = `translateY(${i * ROW}px)`;
       rank.textContent = `#${p.rank}`;
-      countUp(score, p.score - p.gained, p.score, 900);
+      countUp(score, p.score - p.gained, p.score, 800);
     }
-  }, 900);
+  }, 500);
 }
 
 function countUp(node, from, to, ms) {

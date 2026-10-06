@@ -102,16 +102,6 @@
     </div>
   </section>
 
-  <section id="standings" class="screen center hidden">
-    <div class="card wide standings-card">
-      <div class="row st-head">
-        <h1>Bảng xếp hạng</h1>
-        <span id="st-progress" class="muted"></span>
-      </div>
-      <div id="standings-list"></div>
-    </div>
-  </section>
-
   <section id="end" class="screen center hidden">
     <div class="card wide">
       <h1>🏆 Bảng xếp hạng</h1>
@@ -132,7 +122,20 @@
     </div>
   </div>
 
+  <div id="lb-overlay" class="lb-overlay hidden" role="dialog" aria-label="Bảng xếp hạng">
+    <div class="card wide standings-card">
+      <div class="row st-head">
+        <h1>🏆 Bảng xếp hạng</h1>
+        <span id="st-progress" class="muted"></span>
+        <button id="lb-close" class="btn ghost" type="button">✕ Đóng (L)</button>
+      </div>
+      <div id="standings-list"></div>
+      <p class="muted lb-note">Chỉ hiện trên màn hình host — trận đấu vẫn đang diễn ra bình thường.</p>
+    </div>
+  </div>
+
   <div id="host-controls" class="host-controls hidden">
+    <button id="lb-btn" class="btn" type="button" title="Phím L">🏆 Xếp hạng</button>
     <button id="pause-btn" class="btn" type="button" title="Phím P">⏸ Tạm dừng</button>
     <button id="skip-btn" class="btn" type="button" title="Phím N">⏭ Bỏ qua</button>
     <button id="end-btn" class="btn danger" type="button">⏹ Kết thúc</button>

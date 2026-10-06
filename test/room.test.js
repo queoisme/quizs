@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { Room } = require('../src/game/Room');
-const { REVEAL_MS, STANDINGS_MS } = require('../src/config');
+const { REVEAL_MS } = require('../src/config');
 
 // Ô A: x 0-239, B: 240-479, C: 480-719, D: 720-959
 const X = { A: 100, B: 300, C: 600, D: 850 };
@@ -117,9 +117,7 @@ test('hết câu cuối thì kết thúc và xếp hạng theo điểm; chơi l�
   move(room, a, X.B);
   move(room, b, X.C);
   t.mock.timers.tick(10_000); // hết câu 1
-  t.mock.timers.tick(REVEAL_MS); // hiện đáp án xong → bảng xếp hạng tạm thời
-  assert.equal(room.state, 'standings');
-  t.mock.timers.tick(STANDINGS_MS); // sang câu 2
+  t.mock.timers.tick(REVEAL_MS); // hiện đáp án xong → sang câu 2
   assert.equal(room.qIndex, 1);
   move(room, a, X.A);
   move(room, b, X.A);
@@ -141,7 +139,6 @@ test('ván đã kết thúc: người chơi cũ có token reload vẫn xem đư�
   room.start();
   t.mock.timers.tick(10_000);
   t.mock.timers.tick(REVEAL_MS);
-  t.mock.timers.tick(STANDINGS_MS);
   t.mock.timers.tick(10_000);
   t.mock.timers.tick(REVEAL_MS); // câu cuối: đi thẳng tới kết thúc
   assert.equal(room.state, 'ended');
@@ -155,7 +152,7 @@ test('ván đã kết thúc: người chơi cũ có token reload vẫn xem đư�
   assert.equal(snap.leaderboard[0].name, 'An');
 });
 
-test('bảng xếp hạng giữa các câu có hạng lần trước để hiện ▲▼', (t) => {
+test('sau mỗi câu: bảng xếp hạng (cho host) có hạng câu trước để hiện ▲▼, mỗi người biết hạng của mình', (t) => {
   const { room, lastPhase } = setup(t);
   const a = join(room, 'An');
   const b = join(room, 'Binh');
@@ -163,23 +160,23 @@ test('bảng xếp hạng giữa các câu có hạng lần trước để hiệ
   move(room, b, X.B); // câu 1 đúng là B: Bình dẫn đầu
   move(room, a, X.C);
   t.mock.timers.tick(10_000);
-  t.mock.timers.tick(REVEAL_MS);
-  const first = lastPhase('standings').list;
-  assert.deepEqual(first.map((p) => [p.name, p.rank, p.prevRank]), [['Binh', 1, null], ['An', 2, null]]);
-  assert.ok(first[0].gained > 0);
-  assert.equal(first[1].gained, 0);
+  const r1 = lastPhase('reveal');
+  assert.deepEqual(r1.standings.map((p) => [p.name, p.rank, p.prevRank]), [['Binh', 1, null], ['An', 2, null]]);
+  assert.ok(r1.standings[0].gained > 0);
+  assert.equal(r1.standings[1].gained, 0);
+  assert.deepEqual([r1.results[a.id].rank, r1.results[b.id].rank, r1.playerCount], [2, 1, 2]);
+  assert.equal(room.rankOf(a.id), 2);
 
-  // Câu cuối: An trả lời đúng còn Bình sai → An vươn lên. Câu cuối không có bảng tạm, nên thử bằng
-  // cách gọi trực tiếp để kiểm tra prevRank
-  t.mock.timers.tick(STANDINGS_MS);
+  // Câu 2: An đúng còn Bình sai → An vươn lên
+  t.mock.timers.tick(REVEAL_MS);
+  assert.equal(room.state, 'question'); // không còn màn bảng xếp hạng chen giữa
+  a.score += 2000;
   move(room, a, X.A);
   move(room, b, X.D);
   t.mock.timers.tick(10_000);
-  a.score += 2000; // bảo đảm An vượt lên
-  room.clearSchedule();
-  room.showStandings();
-  const second = lastPhase('standings').list;
-  assert.deepEqual(second.map((p) => [p.name, p.rank, p.prevRank]), [['An', 1, 2], ['Binh', 2, 1]]);
+  const r2 = lastPhase('reveal');
+  assert.deepEqual(r2.standings.map((p) => [p.name, p.rank, p.prevRank]), [['An', 1, 2], ['Binh', 2, 1]]);
+  assert.equal(r2.results[a.id].rank, 1);
 });
 
 test('tạm dừng: đồng hồ đứng yên, không nhận di chuyển, điểm thưởng tốc độ không bị lệch', (t) => {
@@ -209,7 +206,7 @@ test('tạm dừng: đồng hồ đứng yên, không nhận di chuyển, điể
   assert.equal(lastPhase('reveal').results[p.id].gained, 900); // như chưa từng tạm dừng
 });
 
-test('tạm dừng lúc hiện đáp án / bảng xếp hạng cũng giữ nguyên thời gian còn lại', (t) => {
+test('tạm dừng lúc hiện đáp án cũng giữ nguyên thời gian còn lại', (t) => {
   const { room } = setup(t);
   join(room, 'An');
   room.start();
@@ -219,11 +216,13 @@ test('tạm dừng lúc hiện đáp án / bảng xếp hạng cũng giữ nguy�
   t.mock.timers.tick(30_000);
   assert.equal(room.state, 'reveal');
   room.resume();
-  t.mock.timers.tick(REVEAL_MS - 1000);
-  assert.equal(room.state, 'standings');
+  t.mock.timers.tick(REVEAL_MS - 1001);
+  assert.equal(room.state, 'reveal');
+  t.mock.timers.tick(1);
+  assert.equal(room.state, 'question');
 });
 
-test('bỏ qua: câu hỏi → đáp án → bảng xếp hạng → câu tiếp; kể cả khi đang tạm dừng', (t) => {
+test('bỏ qua: câu hỏi → đáp án → câu tiếp; kể cả khi đang tạm dừng', (t) => {
   const { room } = setup(t);
   join(room, 'An');
   room.start();
@@ -231,8 +230,6 @@ test('bỏ qua: câu hỏi → đáp án → bảng xếp hạng → câu tiếp
   assert.equal(room.skip().ok, true);
   assert.equal(room.state, 'reveal');
   assert.equal(room.paused, false);
-  room.skip();
-  assert.equal(room.state, 'standings');
   room.skip();
   assert.equal(room.state, 'question');
   assert.equal(room.qIndex, 1);
@@ -255,7 +252,7 @@ test('kết thúc sớm: nhảy tới bảng xếp hạng cuối, câu đang d�
   assert.equal(room.skip().ok, false);
 });
 
-test('bảng xếp hạng giữa các câu: bằng điểm thì đồng hạng', (t) => {
+test('bảng xếp hạng sau mỗi câu: bằng điểm thì đồng hạng', (t) => {
   const { room, lastPhase } = setup(t);
   const a = join(room, 'An');
   const b = join(room, 'Binh');
@@ -265,6 +262,5 @@ test('bảng xếp hạng giữa các câu: bằng điểm thì đồng hạng',
   move(room, b, X.C);
   move(room, c, X.D);
   t.mock.timers.tick(10_000);
-  t.mock.timers.tick(REVEAL_MS);
-  assert.deepEqual(lastPhase('standings').list.map((p) => [p.name, p.rank]), [['An', 1], ['Binh', 2], ['Chi', 2]]);
+  assert.deepEqual(lastPhase('reveal').standings.map((p) => [p.name, p.rank]), [['An', 1], ['Binh', 2], ['Chi', 2]]);
 });

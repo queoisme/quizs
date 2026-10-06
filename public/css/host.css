@@ -136,3 +136,20 @@
 }
 .host-controls .btn { padding: 8px 14px; }
 #pause-btn.resume { background: var(--ok); color: #06210f; }
+
+/* Bảng xếp hạng chỉ trên màn hình host (đè lên sân chơi, không dừng trận) */
+.lb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  display: grid;
+  place-items: center;
+  padding: 16px 16px 88px;
+  background: rgba(10, 12, 28, .78);
+  backdrop-filter: blur(2px);
+  overflow-y: auto;
+}
+.lb-overlay .standings-card { max-height: calc(100dvh - 104px); overflow-y: auto; }
+.lb-overlay .st-head h1 { margin-right: auto; }
+.lb-note { margin: 0; font-size: 13px; text-align: center; }
+#lb-btn.resume { background: var(--primary); }

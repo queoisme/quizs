@@ -32,7 +32,7 @@ class Room {
     this.setQuiz(quiz);
     this.players = new Map(); // id -> player
     this.nextId = 1;
-    this.state = 'lobby'; // lobby | question | reveal | standings | ended
+    this.state = 'lobby'; // lobby | question | reveal | ended
     this.qIndex = 0;
     this.qStart = 0;
     this.duration = 0;
@@ -45,8 +45,7 @@ class Room {
     this.pauseLeft = 0;
     this.dirty = false;
     this.lastReveal = null;
-    this.lastStandings = null;
-    this.prevRanks = new Map(); // id -> hạng ở bảng xếp hạng lần trước, để hiện ▲▼
+    this.prevRanks = new Map(); // id -> hạng sau câu trước, để hiện ▲▼
     this.hazards = [];
     this.takenShields = new Set();
     // Do sockets.js gán: khoá để host nhận lại phòng, link + QR tham gia
@@ -72,6 +71,20 @@ class Room {
       .sort((a, b) => b.score - a.score || b.correct - a.correct || a.name.localeCompare(b.name));
   }
 
+  /* Bảng xếp hạng kèm hạng; bằng điểm thì đồng hạng */
+  ranked() {
+    const board = this.leaderboard();
+    let rank = 0;
+    return board.map((p, i) => {
+      if (i === 0 || board[i - 1].score !== p.score) rank = i + 1;
+      return { ...p, rank };
+    });
+  }
+
+  rankOf(playerId) {
+    return this.ranked().find((p) => p.id === playerId)?.rank ?? null;
+  }
+
   sendRoster() {
     this.broadcast('roster', this.online.map((p) => ({ id: p.id, name: p.name, color: p.color, shield: p.shield })));
   }
@@ -80,7 +93,6 @@ class Room {
   snapshot() {
     if (this.state === 'question') return this.questionPayload();
     if (this.state === 'reveal') return { ...this.lastReveal, paused: this.paused };
-    if (this.state === 'standings') return { ...this.lastStandings, paused: this.paused };
     if (this.state === 'ended') return { phase: 'ended', leaderboard: this.leaderboard() };
     return this.lobbyPayload();
   }
@@ -280,7 +292,7 @@ class Room {
   }
 
   get playing() {
-    return this.state === 'question' || this.state === 'reveal' || this.state === 'standings';
+    return this.state === 'question' || this.state === 'reveal';
   }
 
   pause() {
@@ -318,14 +330,13 @@ class Room {
     return payload;
   }
 
-  /* Bỏ qua phần đang diễn ra: câu hỏi → hiện đáp án ngay; đáp án/bảng xếp hạng → sang bước tiếp */
+  /* Bỏ qua phần đang diễn ra: câu hỏi → hiện đáp án ngay; đáp án → sang câu tiếp */
   skip() {
     if (!this.playing) return { ok: false, error: 'Ván chơi không còn diễn ra' };
     const state = this.state;
     this.clearSchedule();
     if (state === 'question') this.reveal();
-    else if (state === 'reveal') this.afterReveal();
-    else this.afterStandings();
+    else this.afterReveal();
     return { ok: true };
   }
 
@@ -383,6 +394,15 @@ class Room {
       p.score += gained;
       results[p.id] = { zone, correct: isRight, gained, score: p.score };
     }
+
+    // Bảng xếp hạng sau câu này (host mở xem khi cần), kèm hạng câu trước để hiện ▲▼
+    const ranked = this.ranked();
+    const standings = ranked.map((p) => ({
+      ...p, prevRank: this.prevRanks.get(p.id) ?? null, gained: results[p.id]?.gained ?? 0,
+    }));
+    this.prevRanks = new Map(ranked.map((p) => [p.id, p.rank]));
+    for (const p of ranked) if (results[p.id]) results[p.id].rank = p.rank;
+
     this.lastReveal = {
       phase: 'reveal',
       index: this.qIndex,
@@ -392,6 +412,8 @@ class Room {
       correct: q.correct,
       results,
       stats: { right, total: Object.keys(results).length },
+      standings,
+      playerCount: ranked.length,
       isLast: this.qIndex === this.questions.length - 1,
     };
     this.broadcast('phase', this.lastReveal);
@@ -399,30 +421,12 @@ class Room {
   }
 
   afterReveal() {
-    // Câu cuối thì đi thẳng tới màn công bố kết quả
-    if (this.qIndex >= this.questions.length - 1) this.endGame();
-    else this.showStandings();
-  }
-
-  /* Bảng xếp hạng tạm thời giữa các câu, kèm hạng lần trước để hiện ▲▼ */
-  showStandings() {
-    this.state = 'standings';
-    const results = this.lastReveal?.results || {};
-    const board = this.leaderboard();
-    let rank = 0;
-    const list = board.map((p, i) => {
-      if (i === 0 || board[i - 1].score !== p.score) rank = i + 1; // bằng điểm thì đồng hạng
-      return { ...p, rank, prevRank: this.prevRanks.get(p.id) ?? null, gained: results[p.id]?.gained ?? 0 };
-    });
-    this.prevRanks = new Map(list.map((p) => [p.id, p.rank]));
-    this.lastStandings = { phase: 'standings', index: this.qIndex, total: this.questions.length, list };
-    this.broadcast('phase', this.lastStandings);
-    this.schedule(() => this.afterStandings(), C.STANDINGS_MS);
-  }
-
-  afterStandings() {
-    this.qIndex += 1;
-    this.startQuestion();
+    if (this.qIndex >= this.questions.length - 1) {
+      this.endGame();
+    } else {
+      this.qIndex += 1;
+      this.startQuestion();
+    }
   }
 
   endGame() {

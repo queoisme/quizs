@@ -29,7 +29,7 @@
     <header class="qbar">
       <div class="qmeta">
         <span id="qcount"></span>
-        <span><span class="key-hint">← → chạy · Space nhảy · </span><span id="my-score">0</span> điểm</span>
+        <span class="me-stat"><span class="key-hint">← → chạy · Space nhảy · </span><span id="live-rank" class="hidden">Hạng <b id="live-rank-n"></b>/<span id="live-rank-total"></span> · </span><b id="my-score">0</b> điểm</span>
         <span id="qtimer"></span>
       </div>
       <div id="qtext"></div>
@@ -46,16 +46,6 @@
         <button type="button" data-key="right" aria-label="Sang phải">▶</button>
       </div>
       <button type="button" class="jump" data-key="jump">NHẢY</button>
-    </div>
-  </section>
-
-  <section id="standings" class="screen center hidden">
-    <div class="card wide standings-card">
-      <div class="row st-head">
-        <h1>Bảng xếp hạng</h1>
-        <span id="st-progress" class="muted"></span>
-      </div>
-      <div id="standings-list"></div>
     </div>
   </section>
 

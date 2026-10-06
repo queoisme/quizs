@@ -209,3 +209,7 @@
 @media (prefers-reduced-motion: reduce) {
   .settled .st-row, .st-change { transition: none; }
 }
+
+/* Thứ hạng + điểm của người chơi trên thanh câu hỏi */
+.me-stat b { color: var(--text); }
+#live-rank b { color: var(--primary-2); }
