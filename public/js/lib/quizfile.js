@@ -27,7 +27,11 @@ const QuizFile = (() => {
   };
   const DEFAULT_ORDER = ['question', 'a', 'b', 'c', 'd', 'correct', 'time'];
 
+  // Cột số thứ tự ("Question #" của Blooket, "STT"…) thì bỏ qua
+  const INDEX_COLUMN = /^\s*(#|stt|no\.?|number|s[ốo] th[ứu] t[ựu]|(question|câu|cau)\s*(#|no\.?|number|s[ốo]))\s*$/i;
+
   function matchColumn(cell) {
+    if (INDEX_COLUMN.test(String(cell ?? ''))) return null;
     const f = fold(cell);
     if (!f) return null;
     for (const [key, aliases] of Object.entries(COLUMN_ALIASES)) {
@@ -54,11 +58,21 @@ const QuizFile = (() => {
 
   /* CSV theo RFC 4180: ô có thể nằm trong "...", "" là dấu ngoặc kép, xuống dòng trong ô được giữ nguyên */
   function parseCsv(text) {
-    const firstLine = text.split(/\r?\n/, 1)[0];
-    const count = (ch) => firstLine.split(ch).length - 1;
-    // Bằng nhau thì ưu tiên Tab rồi ; (hiếm khi xuất hiện trong nội dung hơn dấu phẩy)
-    const delimiter = ['\t', ';', ','].reduce((best, ch) => (count(ch) > count(best) ? ch : best));
+    // Đếm dấu phân cách ở phần đầu file, bỏ qua phần trong "..." (ô có thể chứa xuống dòng).
+    // Dấu nào nhiều nhất thì chọn; bằng nhau thì ưu tiên Tab, rồi dấu chấm phẩy; không thấy dấu nào thì dùng dấu phẩy.
+    const counts = { '\t': 0, ';': 0, ',': 0 };
+    let inQuotes = false;
+    for (let i = 0; i < Math.min(text.length, 2000); i++) {
+      const ch = text[i];
+      if (ch === '"') inQuotes = !inQuotes;
+      else if (!inQuotes && ch in counts) counts[ch] += 1;
+    }
+    const delimiter = ['\t', ';', ','].reduce((best, ch) => (counts[ch] > counts[best] ? ch : best), '\t');
+    if (counts[delimiter] === 0) return parseWith(text, ',');
+    return parseWith(text, delimiter);
+  }
 
+  function parseWith(text, delimiter) {
     const rows = [];
     let row = [];
     let cell = '';
@@ -89,6 +103,9 @@ const QuizFile = (() => {
   function parseCorrect(raw, answers) {
     const value = String(raw ?? '').trim();
     if (!value) return { error: 'thiếu đáp án đúng' };
+    if (/^[1-4a-d](\s*[,;/&]\s*[1-4a-d])+$/i.test(value)) {
+      return { error: `"${value}": game chỉ chọn được 1 đáp án đúng cho mỗi câu` };
+    }
     const f = fold(value);
     if (/^[a-d]$/.test(f)) return { index: f.charCodeAt(0) - 97 };
     if (/^[1-4]$/.test(f)) return { index: Number(f) - 1 };
@@ -128,13 +145,22 @@ const QuizFile = (() => {
     let start = 0;
     let order = DEFAULT_ORDER;
 
-    // Dòng tiêu đề: có ít nhất cột câu hỏi và cột đáp án đúng
-    const firstIndex = table.findIndex(nonEmpty);
-    if (firstIndex >= 0) {
-      const keys = table[firstIndex].map(matchColumn);
+    // Dòng tên cột: có ít nhất cột câu hỏi và cột đáp án đúng. Tìm trong 10 dòng đầu vì nhiều
+    // file mẫu (Blooket, Kahoot…) có dòng tiêu đề phụ ở trên. Hai cột trùng nghĩa thì lấy cột đầu.
+    for (let i = 0, seenRows = 0; i < table.length && seenRows < 10; i++) {
+      if (!nonEmpty(table[i])) continue;
+      seenRows += 1;
+      const used = new Set();
+      const keys = table[i].map((cell) => {
+        const key = matchColumn(cell);
+        if (!key || used.has(key)) return null;
+        used.add(key);
+        return key;
+      });
       if (keys.includes('question') && keys.includes('correct')) {
         order = keys;
-        start = firstIndex + 1;
+        start = i + 1;
+        break;
       }
     }
     const col = (row, key) => {

@@ -13,6 +13,9 @@ test('CSV: dấu ngoặc kép, dấu phẩy và xuống dòng bên trong ô', ()
 test('CSV: tự nhận dấu phân cách ; và Tab', () => {
   assert.deepEqual(QF.parseCsv('a;b;c\n1;2;3'), [['a', 'b', 'c'], ['1', '2', '3']]);
   assert.deepEqual(QF.parseCsv('a\tb, c\n1\t2'), [['a', 'b, c'], ['1', '2']]);
+  // Dòng đầu là ô có xuống dòng bên trong → vẫn nhận ra dấu phẩy ở phần sau
+  assert.deepEqual(QF.parseCsv('"Tiêu đề\nhai dòng",,\na,b,c'), [['Tiêu đề\nhai dòng', '', ''], ['a', 'b', 'c']]);
+  assert.deepEqual(QF.parseCsv('chỉ một cột\ndòng hai'), [['chỉ một cột'], ['dòng hai']]);
 });
 
 test('mã hoá: bỏ BOM UTF-8; file Windows-1258 vẫn đọc đúng tiếng Việt', () => {
@@ -102,4 +105,47 @@ test('xuất CSV rồi nhập lại được đúng như cũ (kể cả dấu ph
 test('tên file giữ tiếng Việt, bỏ ký tự không hợp lệ; tên bộ lấy lại từ tên file', () => {
   assert.equal(QF.fileName('Chương 1: Mở đầu / Ôn tập?', 'xlsx'), 'Chương 1 Mở đầu Ôn tập.xlsx');
   assert.equal(QF.titleFromFileName('Chủ nghĩa_xã hội.csv'), 'Chủ nghĩa xã hội');
+});
+
+test('mẫu Blooket: dòng tiêu đề phụ ở trên, cột "Question #", tên cột nhiều dòng', () => {
+  const csv = [
+    '"Blooket\nImport Template",,,,,,,',
+    'Question #,Question Text,Answer 1,Answer 2,"Answer 3\n(Optional)","Answer 4\n(Optional)","Time Limit (sec)\n(Max: 300 seconds)","Correct Answer(s)\n(Only include Answer #)"',
+    '1,"Ở cấp làng xã, tín ngưỡng truyền thống tiêu biểu là thờ ai?",Thành hoàng làng,Vua Hùng,Ông bà tổ tiên,Thần Tài,20,1',
+    '4,"Dân tộc Kinh chiếm khoảng bao nhiêu % dân số?","75,3%","80,5%","85,3%","90,1%",20,3',
+    '',
+  ].join('\n');
+  const { rows, hasHeader } = QF.rowsToQuestions(QF.parseCsv(csv));
+  assert.equal(hasHeader, true);
+  assert.equal(rows.length, 2);
+  assert.ok(rows.every((r) => r.ok), JSON.stringify(rows.map((r) => r.errors)));
+  assert.deepEqual(rows[0].data, {
+    question: 'Ở cấp làng xã, tín ngưỡng truyền thống tiêu biểu là thờ ai?',
+    answers: ['Thành hoàng làng', 'Vua Hùng', 'Ông bà tổ tiên', 'Thần Tài'], correct: 0, time: 20,
+  });
+  assert.deepEqual(rows[1].data.answers, ['75,3%', '80,5%', '85,3%', '90,1%']);
+  assert.equal(rows[1].data.correct, 2);
+});
+
+test('mẫu Kahoot và Quizizz', () => {
+  const kahoot = QF.rowsToQuestions([
+    ['Quiz template'],
+    ['', 'Question - max 120 characters', 'Answer 1 - max 75 characters', 'Answer 2 - max 75 characters',
+      'Answer 3 - max 75 characters', 'Answer 4 - max 75 characters', 'Time limit (sec) – 5, 10, 20, 30, 60, 90, 120, or 240 secs',
+      'Correct answer(s) - choose at least one'],
+    ['1', 'Kahoot?', 'w', 'x', 'y', 'z', '30', '4'],
+  ]);
+  assert.deepEqual(kahoot.rows[0].data, { question: 'Kahoot?', answers: ['w', 'x', 'y', 'z'], correct: 3, time: 30 });
+
+  const quizizz = QF.rowsToQuestions([
+    ['Question Text', 'Question Type', 'Option 1', 'Option 2', 'Option 3', 'Option 4', 'Option 5', 'Correct Answer', 'Time in seconds', 'Image Link'],
+    ['Quizizz?', 'Multiple Choice', 'w', 'x', 'y', 'z', '', '2', '45', ''],
+  ]);
+  assert.deepEqual(quizizz.rows[0].data, { question: 'Quizizz?', answers: ['w', 'x', 'y', 'z'], correct: 1, time: 45 });
+});
+
+test('nhiều đáp án đúng thì báo rõ là chỉ chọn được một', () => {
+  assert.match(QF.parseCorrect('1,3', ['a', 'b', 'c', 'd']).error, /chỉ chọn được 1 đáp án đúng/);
+  // nhưng đáp án là chữ có dấu phẩy vẫn khớp theo nội dung
+  assert.equal(QF.parseCorrect('75,3%', ['75,3%', 'x', 'y', 'z']).index, 0);
 });

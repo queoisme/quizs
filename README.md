@@ -40,6 +40,7 @@ PUBLIC_URL=https://abc.ngrok.app npm start
 - **Đáp án đúng**: `A`–`D`, `1`–`4`, hoặc gõ đúng nội dung đáp án. **Thời gian** để trống thì mặc định 15 giây.
 - CSV tự nhận dấu phân cách `,` `;` Tab, và tự đọc được file lưu bằng bảng mã Windows-1258 (Excel đời cũ).
 - Google Sheets: *Tệp → Tải xuống → .xlsx* rồi nhập file đó.
+- Nhập thẳng được file mẫu của **Blooket**, **Kahoot** và **Quizizz** (CSV/Excel): tự tìm dòng tên cột, bỏ qua cột số thứ tự. Game chỉ có 1 đáp án đúng và đúng 4 đáp án mỗi câu, nên câu nào có nhiều đáp án đúng hoặc thiếu đáp án sẽ được báo lỗi.
 
 ## Cấu hình
 
