@@ -49,6 +49,16 @@
     </div>
   </section>
 
+  <section id="standings" class="screen center hidden">
+    <div class="card wide standings-card">
+      <div class="row st-head">
+        <h1>Bảng xếp hạng</h1>
+        <span id="st-progress" class="muted"></span>
+      </div>
+      <div id="standings-list"></div>
+    </div>
+  </section>
+
   <section id="end" class="screen center hidden">
     <div class="card wide">
       <h1>🏆 Bảng xếp hạng</h1>
@@ -56,6 +66,14 @@
       <div id="board"></div>
     </div>
   </section>
+
+  <div id="pause-overlay" class="pause-overlay hidden" role="status">
+    <div class="pause-box">
+      <div class="pause-icon">⏸</div>
+      <strong>Đang tạm dừng</strong>
+      <span class="muted">Chờ chủ phòng tiếp tục…</span>
+    </div>
+  </div>
 
   <div id="notice" class="notice hidden"></div>
 

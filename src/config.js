@@ -24,7 +24,8 @@ module.exports = {
   GROUND_Y: 470,
   ZONES: 4,
 
-  REVEAL_MS: 5000,
+  REVEAL_MS: 4000, // hiện đáp án đúng
+  STANDINGS_MS: 5000, // bảng xếp hạng tạm thời giữa các câu
   HOST_GRACE_MS: 60000, // host mất kết nối/reload: giữ phòng chừng này để host quay lại
   TICK_MS: 50,
   BASE_POINTS: 500,

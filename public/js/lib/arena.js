@@ -25,6 +25,7 @@ class Arena {
     this.time = 0;
     this.hazards = [];
     this.hazardBase = 0; // performance.now() lúc câu hỏi bắt đầu
+    this.pausedAt = 0; // khác 0 khi đang tạm dừng: thời gian thử thách đứng yên
     this.picked = new Set(); // id các khiên đã có người nhặt
     this.hitSeen = new Set(); // "người:thiên thạch" đã hiện hiệu ứng
     new ResizeObserver(() => this.resize()).observe(canvas.parentElement);
@@ -78,12 +79,21 @@ class Arena {
   setHazards(list, base = performance.now()) {
     this.hazards = list || [];
     this.hazardBase = base;
+    if (this.pausedAt) this.pausedAt = performance.now();
     this.picked = new Set();
     this.hitSeen = new Set();
   }
 
   hazardTime() {
-    return performance.now() - this.hazardBase;
+    return (this.pausedAt || performance.now()) - this.hazardBase;
+  }
+
+  setPaused(paused) {
+    if (paused && !this.pausedAt) this.pausedAt = performance.now();
+    if (!paused && this.pausedAt) {
+      this.hazardBase += performance.now() - this.pausedAt; // dời mốc để thử thách chạy tiếp đúng chỗ
+      this.pausedAt = 0;
+    }
   }
 
   hasShield(id) {

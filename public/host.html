@@ -77,17 +77,41 @@
     </div>
   </section>
 
+  <section id="standings" class="screen center hidden">
+    <div class="card wide standings-card">
+      <div class="row st-head">
+        <h1>Bảng xếp hạng</h1>
+        <span id="st-progress" class="muted"></span>
+      </div>
+      <div id="standings-list"></div>
+    </div>
+  </section>
+
   <section id="end" class="screen center hidden">
     <div class="card wide">
       <h1>🏆 Bảng xếp hạng</h1>
       <div id="board"></div>
       <p id="end-error" class="error"></p>
-      <div class="row">
+      <div id="end-actions" class="row">
         <button id="restart" class="btn primary">↻ Chơi lại</button>
         <button id="new-game" class="btn ghost">Chọn bộ khác</button>
       </div>
     </div>
   </section>
+
+  <div id="pause-overlay" class="pause-overlay hidden" role="status">
+    <div class="pause-box">
+      <div class="pause-icon">⏸</div>
+      <strong>Đang tạm dừng</strong>
+      <span class="muted">Bấm ▶ Tiếp tục (phím P) để chơi tiếp</span>
+    </div>
+  </div>
+
+  <div id="host-controls" class="host-controls hidden">
+    <button id="pause-btn" class="btn" type="button" title="Phím P">⏸ Tạm dừng</button>
+    <button id="skip-btn" class="btn" type="button" title="Phím N">⏭ Bỏ qua</button>
+    <button id="end-btn" class="btn danger" type="button">⏹ Kết thúc</button>
+  </div>
 
   <div id="notice" class="notice hidden"></div>
 

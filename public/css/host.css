@@ -54,3 +54,19 @@
 }
 .seg input:checked + span { background: var(--primary); border-color: var(--primary); }
 .seg input:focus-visible + span { outline: 2px solid var(--primary-2); outline-offset: 2px; }
+
+/* Thanh điều khiển trận đấu: nằm trên lớp phủ tạm dừng để host bấm tiếp tục được */
+.host-controls {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 14px;
+  background: rgba(29, 35, 66, .92);
+  border: 1px solid var(--line);
+}
+.host-controls .btn { padding: 8px 14px; }
+#pause-btn.resume { background: var(--ok); color: #06210f; }

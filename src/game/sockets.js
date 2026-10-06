@@ -126,6 +126,17 @@ function registerSockets(io, { auth }) {
       if (room) reply(room.start());
     });
 
+    // Điều khiển trận đấu: tạm dừng, tiếp tục, bỏ qua, kết thúc sớm
+    for (const [event, action] of [
+      ['host:pause', 'pause'], ['host:resume', 'resume'], ['host:skip', 'skip'], ['host:end', 'endEarly'],
+    ]) {
+      socket.on(event, (_, ack) => {
+        const reply = typeof ack === 'function' ? ack : noop;
+        const room = hostRoom(reply);
+        if (room) reply(room[action]());
+      });
+    }
+
     socket.on('host:restart', async (_, ack) => {
       const reply = typeof ack === 'function' ? ack : noop;
       const room = hostRoom(reply);

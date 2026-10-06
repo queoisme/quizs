@@ -19,6 +19,8 @@ const me = { x: W / 2, y: GROUND, vx: 0, vy: 0, f: 1, onGround: true, stunUntil:
 const input = { left: false, right: false, jump: false };
 const SESSION_KEY = 'quiz-player-session';
 let phase = 'lobby';
+let paused = false;
+let pausedSince = 0;
 let questionIndex = null; // gửi kèm vị trí để server biết gói tin thuộc câu nào
 let lastSent = 0;
 let lastKey = '';
@@ -110,6 +112,7 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
     handled = new Set();
     showScreen('game');
   } else if (p.phase === 'reveal') {
+    showScreen('game');
     const r = p.results[arena.selfId];
     const answer = `${LETTERS[p.correct]}. ${p.answers[p.correct]}`;
     if (!r) {
@@ -121,13 +124,31 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
       setScore(r.score);
       banner([document.createTextNode('✘ Sai rồi!'), el('small', '', `Đáp án đúng: ${answer}`)], 'bad');
     }
+  } else if (p.phase === 'standings') {
+    const mine = p.list.find((x) => x.id === arena.selfId);
+    if (mine) setScore(mine.score);
+    $('#st-progress').textContent = `Sau câu ${p.index + 1}/${p.total}`;
+    renderStandings($('#standings-list'), p.list, { meId: arena.selfId, limit: 5 });
+    showScreen('standings');
   } else if (p.phase === 'ended') {
     const rank = p.leaderboard.findIndex((x) => x.id === arena.selfId);
-    $('#my-rank').textContent = rank >= 0
+    const myRank = $('#my-rank');
+    myRank.textContent = rank >= 0
       ? `Bạn xếp hạng #${rank + 1} với ${p.leaderboard[rank].score} điểm`
       : '';
-    renderLeaderboard($('#board'), p.leaderboard, arena.selfId);
+    myRank.classList.add('reveal-later');
+    myRank.classList.remove('shown');
+    const ms = renderLeaderboard($('#board'), p.leaderboard, arena.selfId, { animate: true });
+    setTimeout(() => myRank.classList.add('shown'), ms);
     showScreen('end');
+  }
+}, (value) => {
+  paused = value;
+  if (value) {
+    pausedSince = performance.now();
+  } else if (pausedSince) {
+    me.stunUntil += performance.now() - pausedSince; // đang choáng thì choáng tiếp phần còn lại
+    pausedSince = 0;
   }
 });
 
@@ -189,6 +210,7 @@ for (const b of document.querySelectorAll('.controls [data-key]')) {
 const approach = (v, target, delta) => (v < target ? Math.min(target, v + delta) : Math.max(target, v - delta));
 
 function step(dt) {
+  if (paused) return; // tạm dừng: nhân vật đứng yên, kể cả đang nhảy giữa không trung
   const now = performance.now();
   const t = arena.hazardTime();
   const live = phase === 'question';

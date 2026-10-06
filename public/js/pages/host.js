@@ -135,8 +135,33 @@ $('#new-game').addEventListener('click', () => {
   });
 });
 
+// ---------- Điều khiển trận đấu ----------
+let paused = false;
+const hostAction = (event) => socket.emit(event, null, (res) => {
+  if (res && !res.ok) {
+    $('#notice').textContent = res.error;
+    $('#notice').classList.remove('hidden');
+    setTimeout(() => $('#notice').classList.add('hidden'), 3000);
+  }
+});
+const togglePause = () => hostAction(paused ? 'host:resume' : 'host:pause');
+const skip = () => hostAction('host:skip');
+
+$('#pause-btn').addEventListener('click', togglePause);
+$('#skip-btn').addEventListener('click', skip);
+$('#end-btn').addEventListener('click', () => {
+  if (confirm('Kết thúc trận ngay và công bố kết quả? Câu đang dở sẽ không được tính điểm.')) hostAction('host:end');
+});
+addEventListener('keydown', (e) => {
+  if ($('#host-controls').classList.contains('hidden') || e.target.matches('input, textarea')) return;
+  if (e.code === 'KeyP') togglePause();
+  else if (e.code === 'KeyN') skip();
+});
+
 const applyPhase = bindGame(socket, arena, bar, (p) => {
   const b = $('#banner');
+  const playing = p.phase === 'question' || p.phase === 'reveal' || p.phase === 'standings';
+  $('#host-controls').classList.toggle('hidden', !playing);
   if (p.phase === 'lobby') {
     b.classList.add('hidden');
     $('#start').disabled = $('#players').childElementCount === 0;
@@ -145,22 +170,28 @@ const applyPhase = bindGame(socket, arena, bar, (p) => {
     b.classList.add('hidden');
     showScreen('game');
   } else if (p.phase === 'reveal') {
-    const top = el('ol');
-    for (const t of p.top) {
-      const li = el('li', '', t.name);
-      li.append(el('span', '', String(t.score)));
-      top.append(li);
-    }
     b.className = 'banner good';
     b.replaceChildren(
       document.createTextNode(`Đáp án: ${LETTERS[p.correct]}. ${p.answers[p.correct]}`),
       el('small', '', `${p.stats.right}/${p.stats.total} người trả lời đúng${p.isLast ? ' · Câu cuối!' : ''}`),
-      top,
     );
+    showScreen('game');
+  } else if (p.phase === 'standings') {
+    $('#st-progress').textContent = `Sau câu ${p.index + 1}/${p.total}`;
+    renderStandings($('#standings-list'), p.list, { limit: 10 });
+    showScreen('standings');
   } else if (p.phase === 'ended') {
-    renderLeaderboard($('#board'), p.leaderboard);
+    const actions = $('#end-actions');
+    actions.classList.add('reveal-later');
+    actions.classList.remove('shown');
+    const ms = renderLeaderboard($('#board'), p.leaderboard, null, { animate: true });
+    setTimeout(() => actions.classList.add('shown'), ms);
     showScreen('end');
   }
+}, (value) => {
+  paused = value;
+  $('#pause-btn').textContent = value ? '▶ Tiếp tục' : '⏸ Tạm dừng';
+  $('#pause-btn').classList.toggle('resume', value);
 });
 
 socket.on('disconnect', () => {

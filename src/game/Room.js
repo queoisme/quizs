@@ -32,14 +32,21 @@ class Room {
     this.setQuiz(quiz);
     this.players = new Map(); // id -> player
     this.nextId = 1;
-    this.state = 'lobby'; // lobby | question | reveal | ended
+    this.state = 'lobby'; // lobby | question | reveal | standings | ended
     this.qIndex = 0;
     this.qStart = 0;
     this.duration = 0;
     this.deadline = 0;
     this.timer = null;
+    this.timerFn = null; // việc sẽ làm khi hết giờ (để tạm dừng / tiếp tục)
+    this.timerDue = 0;
+    this.paused = false;
+    this.pausedAt = 0;
+    this.pauseLeft = 0;
     this.dirty = false;
     this.lastReveal = null;
+    this.lastStandings = null;
+    this.prevRanks = new Map(); // id -> hạng ở bảng xếp hạng lần trước, để hiện ▲▼
     this.hazards = [];
     this.takenShields = new Set();
     // Do sockets.js gán: khoá để host nhận lại phòng, link + QR tham gia
@@ -72,7 +79,8 @@ class Room {
   /* Trạng thái hiện tại, gửi cho người vừa vào phòng */
   snapshot() {
     if (this.state === 'question') return this.questionPayload();
-    if (this.state === 'reveal') return this.lastReveal;
+    if (this.state === 'reveal') return { ...this.lastReveal, paused: this.paused };
+    if (this.state === 'standings') return { ...this.lastStandings, paused: this.paused };
     if (this.state === 'ended') return { phase: 'ended', leaderboard: this.leaderboard() };
     return this.lobbyPayload();
   }
@@ -90,10 +98,15 @@ class Room {
       text: q.question,
       answers: q.answers,
       duration: this.duration,
-      remaining: Math.max(0, this.deadline - Date.now()),
+      remaining: this.questionRemaining(),
       hazards: this.hazards,
+      paused: this.paused,
       spawn,
     };
+  }
+
+  questionRemaining() {
+    return Math.max(0, this.deadline - (this.paused ? this.pausedAt : Date.now()));
   }
 
   // ---------- Người chơi ----------
@@ -161,7 +174,7 @@ class Room {
 
   move(playerId, socketId, m) {
     const p = this.players.get(playerId);
-    if (!p || p.socketId !== socketId) return;
+    if (!p || p.socketId !== socketId || this.paused) return;
     const x = Number(m?.x);
     const y = Number(m?.y);
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
@@ -186,7 +199,7 @@ class Room {
 
   /* Hazard của câu hiện tại, chỉ khi gói tin thuộc đúng câu này */
   currentHazard(m, type) {
-    if (this.state !== 'question' || m?.q !== this.qIndex) return null;
+    if (this.state !== 'question' || this.paused || m?.q !== this.qIndex) return null;
     const h = this.hazards.find((x) => x.id === m.hazardId);
     return h?.type === type ? h : null;
   }
@@ -228,6 +241,7 @@ class Room {
     if (this.state !== 'lobby') return { ok: false, error: 'Ván chơi đã bắt đầu' };
     if (this.online.length === 0) return { ok: false, error: 'Chưa có người chơi nào' };
     this.qIndex = 0;
+    this.prevRanks = new Map();
     this.startQuestion();
     return { ok: true };
   }
@@ -248,6 +262,82 @@ class Room {
     this.broadcast('phase', this.lobbyPayload());
     return { ok: true, total: this.questions.length };
   }
+
+  // ---------- Hẹn giờ có thể tạm dừng ----------
+
+  schedule(fn, ms) {
+    clearTimeout(this.timer);
+    this.timerFn = fn;
+    this.timerDue = Date.now() + ms;
+    this.timer = setTimeout(fn, ms);
+  }
+
+  clearSchedule() {
+    clearTimeout(this.timer);
+    this.timer = null;
+    this.timerFn = null;
+    this.paused = false;
+  }
+
+  get playing() {
+    return this.state === 'question' || this.state === 'reveal' || this.state === 'standings';
+  }
+
+  pause() {
+    if (!this.playing) return { ok: false, error: 'Chỉ tạm dừng được khi đang chơi' };
+    if (!this.paused) {
+      clearTimeout(this.timer);
+      this.paused = true;
+      this.pausedAt = Date.now();
+      this.pauseLeft = Math.max(0, this.timerDue - this.pausedAt);
+      this.broadcast('pause', this.pausePayload());
+    }
+    return { ok: true };
+  }
+
+  resume() {
+    if (!this.playing) return { ok: false, error: 'Ván chơi không còn diễn ra' };
+    if (this.paused) {
+      const delta = Date.now() - this.pausedAt;
+      this.paused = false;
+      if (this.state === 'question') {
+        // Thời gian tạm dừng không tính vào thời gian trả lời (điểm thưởng tốc độ, lịch thử thách)
+        this.qStart += delta;
+        this.deadline += delta;
+        for (const p of this.players.values()) if (p.enteredAt) p.enteredAt += delta;
+      }
+      this.schedule(this.timerFn, this.pauseLeft);
+      this.broadcast('pause', this.pausePayload());
+    }
+    return { ok: true };
+  }
+
+  pausePayload() {
+    const payload = { paused: this.paused, state: this.state };
+    if (this.state === 'question') Object.assign(payload, { remaining: this.questionRemaining(), duration: this.duration });
+    return payload;
+  }
+
+  /* Bỏ qua phần đang diễn ra: câu hỏi → hiện đáp án ngay; đáp án/bảng xếp hạng → sang bước tiếp */
+  skip() {
+    if (!this.playing) return { ok: false, error: 'Ván chơi không còn diễn ra' };
+    const state = this.state;
+    this.clearSchedule();
+    if (state === 'question') this.reveal();
+    else if (state === 'reveal') this.afterReveal();
+    else this.afterStandings();
+    return { ok: true };
+  }
+
+  /* Kết thúc ngay; câu đang dở không được tính điểm */
+  endEarly() {
+    if (!this.playing) return { ok: false, error: 'Ván chơi không còn diễn ra' };
+    this.clearSchedule();
+    this.endGame();
+    return { ok: true };
+  }
+
+  // ---------- Diễn biến ván chơi ----------
 
   startQuestion() {
     const q = this.questions[this.qIndex];
@@ -271,7 +361,7 @@ class Room {
     }
     this.dirty = true;
     this.broadcast('phase', this.questionPayload(spawn));
-    this.timer = setTimeout(() => this.reveal(), this.duration);
+    this.schedule(() => this.reveal(), this.duration);
   }
 
   reveal() {
@@ -302,20 +392,42 @@ class Room {
       correct: q.correct,
       results,
       stats: { right, total: Object.keys(results).length },
-      top: this.leaderboard().slice(0, 5),
       isLast: this.qIndex === this.questions.length - 1,
     };
     this.broadcast('phase', this.lastReveal);
+    this.schedule(() => this.afterReveal(), C.REVEAL_MS);
+  }
 
-    this.timer = setTimeout(() => {
-      this.qIndex += 1;
-      if (this.qIndex < this.questions.length) this.startQuestion();
-      else this.endGame();
-    }, C.REVEAL_MS);
+  afterReveal() {
+    // Câu cuối thì đi thẳng tới màn công bố kết quả
+    if (this.qIndex >= this.questions.length - 1) this.endGame();
+    else this.showStandings();
+  }
+
+  /* Bảng xếp hạng tạm thời giữa các câu, kèm hạng lần trước để hiện ▲▼ */
+  showStandings() {
+    this.state = 'standings';
+    const results = this.lastReveal?.results || {};
+    const board = this.leaderboard();
+    let rank = 0;
+    const list = board.map((p, i) => {
+      if (i === 0 || board[i - 1].score !== p.score) rank = i + 1; // bằng điểm thì đồng hạng
+      return { ...p, rank, prevRank: this.prevRanks.get(p.id) ?? null, gained: results[p.id]?.gained ?? 0 };
+    });
+    this.prevRanks = new Map(list.map((p) => [p.id, p.rank]));
+    this.lastStandings = { phase: 'standings', index: this.qIndex, total: this.questions.length, list };
+    this.broadcast('phase', this.lastStandings);
+    this.schedule(() => this.afterStandings(), C.STANDINGS_MS);
+  }
+
+  afterStandings() {
+    this.qIndex += 1;
+    this.startQuestion();
   }
 
   endGame() {
     this.state = 'ended';
+    this.paused = false;
     this.broadcast('phase', { phase: 'ended', leaderboard: this.leaderboard() });
   }
 
