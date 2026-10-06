@@ -15,6 +15,9 @@
     <aside class="sidebar">
       <h2>Bộ câu hỏi</h2>
       <button id="new-quiz" class="btn primary">+ Tạo bộ mới</button>
+      <button id="import-btn" class="btn ghost" type="button">⬆ Nhập từ file</button>
+      <p class="template-links muted">Tải file mẫu: <a href="#" data-template="xlsx">Excel</a> · <a href="#" data-template="csv">CSV</a></p>
+      <input id="import-file" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.ods,.json" hidden>
       <ul id="quiz-list"></ul>
       <a href="/host" class="btn ghost">▶ Tổ chức chơi</a>
       <button id="logout" class="btn ghost" type="button">Đăng xuất</button>
@@ -27,6 +30,14 @@
           <input id="title" class="title-input" maxlength="100" placeholder="Tên bộ câu hỏi">
           <button id="save" class="btn primary">Lưu (Ctrl+S)</button>
           <a id="play" class="btn ghost">▶ Chơi bộ này</a>
+          <div class="menu">
+            <button id="export-btn" class="btn ghost" type="button" aria-haspopup="true" aria-expanded="false">⬇ Xuất file ▾</button>
+            <div id="export-menu" class="menu-list hidden" role="menu">
+              <button type="button" role="menuitem" data-format="xlsx">Excel (.xlsx)</button>
+              <button type="button" role="menuitem" data-format="csv">CSV (.csv)</button>
+              <button type="button" role="menuitem" data-format="json">JSON (.json)</button>
+            </div>
+          </div>
           <button id="delete" class="btn danger">Xoá bộ</button>
           <span id="status" class="muted"></span>
         </div>
@@ -37,8 +48,36 @@
     </main>
   </div>
   <div id="toast" class="toast hidden"></div>
+  <div id="drop-overlay" class="drop-overlay hidden"><div>⬆ Thả file vào đây để nhập câu hỏi<small>.xlsx · .csv · .json</small></div></div>
+
+  <dialog id="import-dialog" class="import-dialog">
+    <form method="dialog" class="import-body">
+      <div class="import-head">
+        <h2>Nhập câu hỏi từ file</h2>
+        <span id="import-name" class="muted"></span>
+      </div>
+      <p id="import-summary" class="import-summary"></p>
+      <div class="import-table-wrap">
+        <table class="import-table">
+          <thead><tr><th>Dòng</th><th>Câu hỏi</th><th>A</th><th>B</th><th>C</th><th>D</th><th>⏱</th><th></th></tr></thead>
+          <tbody id="import-rows"></tbody>
+        </table>
+      </div>
+      <fieldset class="import-target">
+        <label><input type="radio" name="import-target" value="new" checked> Tạo bộ mới tên
+          <input id="import-title" maxlength="100"></label>
+        <label id="append-label"><input type="radio" name="import-target" value="append"> Thêm vào cuối bộ đang mở
+          <strong id="import-current"></strong></label>
+      </fieldset>
+      <div class="import-actions">
+        <button value="cancel" class="btn ghost" formnovalidate>Huỷ</button>
+        <button id="import-confirm" value="ok" class="btn primary">Nhập</button>
+      </div>
+    </form>
+  </dialog>
   <script src="/js/lib/constants.js"></script>
   <script src="/js/lib/ui.js"></script>
+  <script src="/js/lib/quizfile.js"></script>
   <script src="/js/pages/editor.js"></script>
 </body>
 </html>

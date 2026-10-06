@@ -22,6 +22,25 @@ Terminal sẽ in ra các địa chỉ:
 PUBLIC_URL=https://abc.ngrok.app npm start
 ```
 
+## Nhập / xuất bộ câu hỏi
+
+Ở trang `/editor`:
+
+- **⬆ Nhập từ file** (hoặc kéo thả file vào trang): `.xlsx`, `.csv`, `.json`. Trước khi nhập sẽ hiện bảng xem trước, dòng lỗi được đánh dấu kèm lý do và bị bỏ qua. Có thể tạo bộ mới hoặc thêm vào cuối bộ đang mở. Câu hỏi được đưa vào trình soạn ở trạng thái chưa lưu.
+- **⬇ Xuất file**: tải bộ đang mở (kể cả phần chưa lưu) ra Excel, CSV hoặc JSON.
+- **Tải file mẫu**: link dưới nút Nhập.
+
+Định dạng (một dòng là một câu hỏi):
+
+| Câu hỏi | Đáp án A | Đáp án B | Đáp án C | Đáp án D | Đáp án đúng | Thời gian (giây) |
+|---|---|---|---|---|---|---|
+| Thủ đô Việt Nam? | Hà Nội | Huế | Đà Nẵng | TP.HCM | A | 15 |
+
+- Tiêu đề cột nhận có dấu, không dấu hoặc tiếng Anh, theo thứ tự bất kỳ. Không có dòng tiêu đề thì đọc theo thứ tự cột như bảng trên.
+- **Đáp án đúng**: `A`–`D`, `1`–`4`, hoặc gõ đúng nội dung đáp án. **Thời gian** để trống thì mặc định 15 giây.
+- CSV tự nhận dấu phân cách `,` `;` Tab, và tự đọc được file lưu bằng bảng mã Windows-1258 (Excel đời cũ).
+- Google Sheets: *Tệp → Tải xuống → .xlsx* rồi nhập file đó.
+
 ## Cấu hình
 
 Cấu hình bằng biến môi trường (xem `.env.example`):

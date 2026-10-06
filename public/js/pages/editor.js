@@ -316,6 +316,217 @@ addEventListener('beforeunload', (e) => {
   if (dirty) e.preventDefault();
 });
 
+// ---------- Nhập / xuất file ----------
+
+let xlsxPromise = null;
+/* SheetJS ~1 MB: chỉ tải khi thật sự đọc/ghi Excel */
+function loadXlsx() {
+  xlsxPromise ??= new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = '/vendor/xlsx.full.min.js';
+    s.onload = () => resolve(window.XLSX);
+    s.onerror = () => {
+      xlsxPromise = null;
+      reject(new Error('Không tải được thư viện đọc Excel'));
+    };
+    document.head.append(s);
+  });
+  return xlsxPromise;
+}
+
+function download(blob, name) {
+  const a = el('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function exportQuiz(quiz, format) {
+  let blob;
+  if (format === 'csv') {
+    blob = new Blob([QuizFile.toCsv(quiz)], { type: 'text/csv;charset=utf-8' });
+  } else if (format === 'json') {
+    blob = new Blob([QuizFile.toJson(quiz)], { type: 'application/json' });
+  } else {
+    const XLSX = await loadXlsx();
+    const ws = XLSX.utils.aoa_to_sheet(QuizFile.toTable(quiz));
+    ws['!cols'] = [{ wch: 50 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 22 }, { wch: 12 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Câu hỏi');
+    wb.Props = { Title: quiz.title }; // nhập lại thì lấy được đúng tên bộ
+    blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+  }
+  download(blob, QuizFile.fileName(quiz.title, format));
+}
+
+const MAX_FILE_BYTES = 5 * 1024 * 1024;
+
+/* @returns {{rows, title, hasHeader?, encoding?}} */
+async function readQuizFile(file) {
+  if (file.size > MAX_FILE_BYTES) throw new Error('File lớn quá 5 MB');
+  const ext = file.name.split('.').pop().toLowerCase();
+  const fallbackTitle = QuizFile.titleFromFileName(file.name);
+  const buffer = await file.arrayBuffer();
+
+  if (ext === 'json') {
+    let obj;
+    try {
+      obj = JSON.parse(QuizFile.decodeText(buffer).text);
+    } catch {
+      throw new Error('File JSON không đúng định dạng');
+    }
+    const parsed = QuizFile.jsonToQuestions(obj);
+    return { ...parsed, title: parsed.title || fallbackTitle, hasHeader: true };
+  }
+  if (['xlsx', 'xls', 'ods'].includes(ext)) {
+    const XLSX = await loadXlsx();
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const table = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
+    return { ...QuizFile.rowsToQuestions(table), title: wb.Props?.Title || fallbackTitle };
+  }
+  if (['csv', 'tsv', 'txt'].includes(ext)) {
+    const { text, encoding } = QuizFile.decodeText(buffer);
+    return { ...QuizFile.rowsToQuestions(QuizFile.parseCsv(text)), title: fallbackTitle, encoding };
+  }
+  throw new Error(`Không hỗ trợ file .${ext} — hãy dùng .xlsx, .csv hoặc .json`);
+}
+
+let pendingImport = null;
+
+async function openImport(file) {
+  let parsed;
+  try {
+    parsed = await readQuizFile(file);
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
+  pendingImport = parsed;
+  const ok = parsed.rows.filter((r) => r.ok).length;
+  const bad = parsed.rows.length - ok;
+
+  $('#import-name').textContent = file.name;
+  const notes = [`✓ ${ok} câu hợp lệ`];
+  if (bad) notes.push(`✗ ${bad} dòng lỗi sẽ bị bỏ qua`);
+  if (parsed.encoding === 'windows-1258') notes.push('đã tự chuyển từ bảng mã Windows-1258');
+  if (parsed.hasHeader === false) notes.push('không thấy dòng tiêu đề nên đọc theo thứ tự cột mặc định');
+  if (!parsed.rows.length) notes.splice(0, notes.length, 'Không tìm thấy câu hỏi nào trong file.');
+  $('#import-summary').textContent = notes.join(' · ');
+  $('#import-summary').classList.toggle('has-errors', bad > 0 || ok === 0);
+
+  $('#import-rows').replaceChildren(...parsed.rows.map((r) => {
+    const tr = el('tr', r.ok ? '' : 'bad');
+    tr.append(el('td', 'muted', String(r.line)), el('td', 'q', r.data.question || '—'));
+    r.data.answers.forEach((a, j) => tr.append(el('td', j === r.data.correct ? 'correct' : '', a || '—')));
+    tr.append(el('td', 'muted', String(r.data.time)), el('td', 'status', r.ok ? '✓' : r.errors.join('; ')));
+    return tr;
+  }));
+
+  $('#import-title').value = parsed.title;
+  const canAppend = Boolean(current);
+  $('#append-label').classList.toggle('disabled', !canAppend);
+  $('#append-label input').disabled = !canAppend;
+  $('#import-current').textContent = canAppend ? `«${current.title || 'chưa đặt tên'}»` : '';
+  document.querySelector(`input[name=import-target][value=${canAppend && current.id ? 'append' : 'new'}]`).checked = true;
+  $('#import-confirm').textContent = `Nhập ${ok} câu`;
+  $('#import-confirm').disabled = ok === 0;
+  $('#import-dialog').showModal();
+}
+
+$('#import-dialog').addEventListener('close', () => {
+  const dialog = $('#import-dialog');
+  if (dialog.returnValue !== 'ok' || !pendingImport) return;
+  const questions = pendingImport.rows.filter((r) => r.ok).map((r) => r.data);
+  pendingImport = null;
+  const target = document.querySelector('input[name=import-target]:checked').value;
+
+  if (target === 'append' && current) {
+    // Bộ mới tạo còn đúng một câu trống thì thay luôn câu đó
+    if (current.questions.length === 1 && isBlank(current.questions[0])) current.questions = [];
+    current.questions.push(...questions);
+  } else {
+    if (!confirmDiscard()) return;
+    current = { id: null, title: $('#import-title').value.trim(), questions };
+    history.replaceState(null, '', '/editor');
+  }
+  dirty = true;
+  renderEditor();
+  setDirty(true);
+  const over = current.questions.length > 100 ? ' (bộ câu hỏi tối đa 100 câu, hãy bớt lại trước khi lưu)' : '';
+  toast(`Đã nhập ${questions.length} câu — kiểm tra lại rồi bấm Lưu${over}`);
+});
+
+$('#import-btn').addEventListener('click', () => $('#import-file').click());
+$('#import-file').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  e.target.value = ''; // chọn lại cùng file vẫn kích hoạt
+  if (file) openImport(file);
+});
+
+// Kéo thả file vào bất kỳ đâu trên trang
+let dragDepth = 0;
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+addEventListener('dragenter', (e) => {
+  if (!hasFiles(e)) return;
+  dragDepth += 1;
+  $('#drop-overlay').classList.remove('hidden');
+});
+addEventListener('dragleave', (e) => {
+  if (!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) $('#drop-overlay').classList.add('hidden');
+});
+addEventListener('dragover', (e) => {
+  if (hasFiles(e)) e.preventDefault();
+});
+addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return;
+  e.preventDefault();
+  dragDepth = 0;
+  $('#drop-overlay').classList.add('hidden');
+  const file = e.dataTransfer.files[0];
+  if (file) openImport(file);
+});
+
+// Xuất bộ đang mở (kể cả phần chưa lưu)
+const exportMenu = $('#export-menu');
+const toggleExportMenu = (open) => {
+  exportMenu.classList.toggle('hidden', !open);
+  $('#export-btn').setAttribute('aria-expanded', String(open));
+};
+$('#export-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleExportMenu(exportMenu.classList.contains('hidden'));
+});
+document.addEventListener('click', () => toggleExportMenu(false));
+exportMenu.addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-format]');
+  if (!btn || !current) return;
+  toggleExportMenu(false);
+  try {
+    await exportQuiz({ title: current.title.trim() || 'Bộ câu hỏi', questions: current.questions }, btn.dataset.format);
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+for (const link of document.querySelectorAll('[data-template]')) {
+  link.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      await exportQuiz(QuizFile.TEMPLATE, link.dataset.template);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+}
+
 (async () => {
   try {
     await loadList();

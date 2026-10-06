@@ -29,6 +29,8 @@ app.get(['/login', '/login.html'], (req, res, next) => {
 }, page('login.html'));
 
 app.use(express.static(C.PUBLIC_DIR));
+// Thư viện đọc/ghi Excel (SheetJS), chỉ tải khi trang soạn câu hỏi cần
+app.get('/vendor/xlsx.full.min.js', (req, res) => res.sendFile(require.resolve('xlsx/dist/xlsx.full.min.js')));
 app.use('/api', auth.router);
 // Cả đọc lẫn ghi đều cần đăng nhập: nội dung bộ câu hỏi có đáp án đúng
 app.use('/api/quizzes', auth.requireApi, quizRoutes);
