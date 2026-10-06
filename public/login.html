@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đăng nhập quản trị</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/base.css">
+</head>
+<body>
+  <section class="screen center">
+    <form id="login-form" class="card">
+      <h1>Đăng nhập quản trị</h1>
+      <p class="muted" style="margin:0">Dành cho người tổ chức và soạn câu hỏi. Người chơi không cần đăng nhập, chỉ cần quét mã QR.</p>
+      <label>Mật khẩu
+        <input id="password" type="password" autocomplete="current-password" required autofocus>
+      </label>
+      <p id="error" class="error"></p>
+      <button id="submit" class="btn primary big" type="submit">Đăng nhập</button>
+    </form>
+  </section>
+  <script src="/js/lib/ui.js"></script>
+  <script src="/js/pages/login.js"></script>
+</body>
+</html>

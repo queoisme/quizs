@@ -1,0 +1,22 @@
+{
+  "name": "game-mln131",
+  "version": "1.0.0",
+  "description": "Quiz nhiều người chơi: điều khiển nhân vật chạy vào ô đáp án",
+  "main": "server.js",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=.env --watch server.js",
+    "test": "node --test",
+    "import-quizzes": "node --env-file-if-exists=.env scripts/import-quizzes.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "socket.io": "^4.8.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

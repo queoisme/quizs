@@ -1,0 +1,56 @@
+/* ---------- Host ---------- */
+.quiz-list { display: grid; gap: 8px; max-height: 50vh; overflow: auto; }
+.quiz-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.quiz-item input { width: auto; accent-color: var(--primary); }
+.quiz-item .qt { flex: 1; font-weight: 700; }
+.quiz-item:has(input:checked) { border-color: var(--primary); background: var(--panel-2); }
+
+.host-lobby {
+  display: grid;
+  grid-template-columns: minmax(280px, 420px) 1fr;
+  gap: 24px;
+  padding: 24px;
+  min-height: 100dvh;
+  align-items: start;
+}
+.join-box {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+}
+.join-box img { width: 100%; max-width: 360px; aspect-ratio: 1; background: #fff; border-radius: 12px; padding: 8px; }
+.join-box a { word-break: break-all; font-weight: 600; }
+.pin { font-size: 64px; font-weight: 800; letter-spacing: 6px; line-height: 1; }
+.lobby-side { display: grid; gap: 16px; }
+.lobby-side .row { justify-content: space-between; }
+.players { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 14px; border-radius: 999px; font-weight: 700; color: #111; animation: pop .25s ease-out; }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } }
+@media (max-width: 800px) { .host-lobby { grid-template-columns: 1fr; } }
+
+.difficulty { display: grid; gap: 6px; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg label { display: block; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg span {
+  display: block;
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-weight: 700;
+}
+.seg input:checked + span { background: var(--primary); border-color: var(--primary); }
+.seg input:focus-visible + span { outline: 2px solid var(--primary-2); outline-offset: 2px; }

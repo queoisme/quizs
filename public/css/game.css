@@ -1,0 +1,126 @@
+/* Màn chơi + bảng xếp hạng (trang người chơi và host) */
+/* ---------- Màn chơi ---------- */
+#game { height: 100dvh; display: flex; flex-direction: column; }
+.qbar {
+  padding: 8px 16px 10px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+.qmeta { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-weight: 700; }
+#qtimer { color: var(--text); min-width: 3ch; text-align: right; }
+#qtext { font-size: clamp(18px, 3.2vw, 34px); font-weight: 700; line-height: 1.25; text-align: center; }
+.timebar { height: 8px; background: var(--bg); border-radius: 4px; overflow: hidden; }
+#timefill { height: 100%; width: 0; background: var(--ok); }
+#timefill.urgent { background: var(--danger); }
+
+.stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; padding: 8px; }
+.stage canvas { display: block; border-radius: 12px; }
+.banner {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  transform: translate(-50%, -50%);
+  background: rgba(15, 18, 40, .93);
+  border: 2px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 24px;
+  text-align: center;
+  font-size: clamp(18px, 3vw, 30px);
+  font-weight: 800;
+  width: max-content;
+  max-width: min(92%, 640px);
+  pointer-events: none;
+}
+.banner.good { border-color: var(--ok); color: var(--ok); }
+.banner.bad { border-color: var(--danger); color: #ffb3ba; }
+.banner small { display: block; font-size: .6em; font-weight: 600; color: var(--muted); }
+.banner ol { text-align: left; font-size: .6em; margin: 8px 0 0; padding-left: 1.4em; color: var(--text); }
+.banner ol span { float: right; margin-left: 24px; color: var(--muted); }
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.controls .pad { display: flex; gap: 12px; }
+.controls button {
+  width: 80px;
+  height: 64px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 26px;
+  font-weight: 800;
+  touch-action: none;
+}
+.controls button.active { background: var(--primary); }
+.controls .jump { width: 130px; font-size: 20px; }
+.key-hint { display: none; }
+.rotate-hint { display: none; }
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-hint { display: block; position: absolute; bottom: 12px; margin: 0; color: var(--muted); font-weight: 600; }
+}
+/* Điện thoại xoay ngang: đặt nút vào hai khoảng trống bên cạnh sân để sân được to nhất */
+@media (orientation: landscape) and (max-height: 560px) {
+  .qbar { padding: 4px 12px 6px; gap: 2px; }
+  #qtext { font-size: clamp(15px, 4.2vh, 22px); }
+  .controls {
+    position: fixed;
+    inset: auto 0 0 0;
+    padding: 0 max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-bottom));
+    pointer-events: none;
+  }
+  .controls .pad, .controls .jump { pointer-events: auto; }
+  .controls button { width: 72px; height: 64px; background: rgba(40, 48, 98, .85); }
+  .controls .jump { width: 96px; height: 96px; border-radius: 50%; font-size: 17px; }
+  .controls .pad { gap: 8px; }
+  .controls .pad button { width: 64px; height: 80px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .controls { display: none; }
+  .key-hint { display: inline; }
+}
+
+/* ---------- Bảng xếp hạng ---------- */
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 12px; margin: 8px 0 16px; }
+.step { display: grid; justify-items: center; gap: 4px; width: min(32%, 180px); }
+.step .avatar { width: 48px; height: 48px; border-radius: 14px; border: 3px solid rgba(0, 0, 0, .3); }
+.step .pname { font-weight: 800; text-align: center; word-break: break-word; }
+.step .pscore { color: var(--muted); font-weight: 600; }
+.step .block {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 36px;
+  font-weight: 800;
+  border-radius: 12px 12px 0 0;
+}
+.step-1 .block { height: 140px; background: linear-gradient(#ffd43b, #f08c00); color: #3b2a00; }
+.step-2 .block { height: 100px; background: linear-gradient(#e9ecef, #868e96); color: #222; }
+.step-3 .block { height: 72px; background: linear-gradient(#ffa94d, #a0522d); color: #2b1300; }
+.step.me .pname { color: var(--primary-2); }
+.rest { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; counter-reset: rank 3; }
+.rest li {
+  counter-increment: rank;
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  background: var(--panel-2);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.rest li::before { content: "#" counter(rank); color: var(--muted); font-weight: 700; }
+.rest li.me { outline: 2px solid var(--primary); }
+.rest .pname { font-weight: 700; overflow-wrap: anywhere; }
+.rest .pcorrect { color: var(--muted); font-size: 14px; }
+.rest .pscore { font-weight: 800; }
+#my-rank { font-size: 20px; font-weight: 700; margin: 0; text-align: center; }

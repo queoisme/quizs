@@ -1,0 +1,74 @@
+{
+  "id": "5a3f0c1e9b72",
+  "title": "Bộ mẫu – Chủ nghĩa xã hội khoa học",
+  "questions": [
+    {
+      "question": "Ai là những người sáng lập chủ nghĩa xã hội khoa học?",
+      "answers": [
+        "V.I. Lênin",
+        "C. Mác và Ph. Ăngghen",
+        "Hồ Chí Minh",
+        "Xanh Ximông và Phuriê"
+      ],
+      "correct": 1,
+      "time": 15
+    },
+    {
+      "question": "Tác phẩm nào đánh dấu sự ra đời của chủ nghĩa xã hội khoa học?",
+      "answers": [
+        "Tư bản",
+        "Nhà nước và cách mạng",
+        "Tuyên ngôn của Đảng Cộng sản",
+        "Chống Đuyrinh"
+      ],
+      "correct": 2,
+      "time": 15
+    },
+    {
+      "question": "Tuyên ngôn của Đảng Cộng sản được công bố vào năm nào?",
+      "answers": [
+        "1848",
+        "1867",
+        "1871",
+        "1917"
+      ],
+      "correct": 0,
+      "time": 12
+    },
+    {
+      "question": "Sứ mệnh lịch sử xóa bỏ chủ nghĩa tư bản, xây dựng xã hội mới thuộc về giai cấp nào?",
+      "answers": [
+        "Giai cấp nông dân",
+        "Tầng lớp trí thức",
+        "Giai cấp tư sản",
+        "Giai cấp công nhân"
+      ],
+      "correct": 3,
+      "time": 15
+    },
+    {
+      "question": "Ai là người bảo vệ và phát triển chủ nghĩa xã hội khoa học trong thời đại đế quốc chủ nghĩa?",
+      "answers": [
+        "V.I. Lênin",
+        "C. Mác",
+        "Ph. Ăngghen",
+        "Rôbớt Ôoen"
+      ],
+      "correct": 0,
+      "time": 15
+    },
+    {
+      "question": "tại sao mặt trời lại mọc ở đằng đâu",
+      "answers": [
+        "tại vì nó phải thế",
+        "tại vì mình mún",
+        "....",
+        "....."
+      ],
+      "correct": 0,
+      "time": 15
+    }
+  ],
+  "createdAt": "2026-10-05T00:00:00.000Z",
+  "updatedAt": "2026-10-05T09:12:23.982Z"
+}

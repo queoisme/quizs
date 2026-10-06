@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Vào chơi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/game.css">
+</head>
+<body>
+  <section id="join" class="screen center">
+    <form id="join-form" class="card">
+      <h1>Vào phòng chơi</h1>
+      <label>Mã PIN
+        <input id="pin" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="off" required>
+      </label>
+      <label>Tên của bạn
+        <input id="name" maxlength="16" autocomplete="nickname" required>
+      </label>
+      <p id="join-error" class="error"></p>
+      <button id="join-btn" class="btn primary big" type="submit">Vào chơi</button>
+    </form>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <header class="qbar">
+      <div class="qmeta">
+        <span id="qcount"></span>
+        <span><span class="key-hint">← → chạy · Space nhảy · </span><span id="my-score">0</span> điểm</span>
+        <span id="qtimer"></span>
+      </div>
+      <div id="qtext"></div>
+      <div class="timebar"><div id="timefill"></div></div>
+    </header>
+    <div class="stage">
+      <canvas id="arena"></canvas>
+      <div id="banner" class="banner hidden"></div>
+      <p class="rotate-hint">📱 Xoay ngang điện thoại để sân chơi to hơn</p>
+    </div>
+    <div class="controls">
+      <div class="pad">
+        <button type="button" data-key="left" aria-label="Sang trái">◀</button>
+        <button type="button" data-key="right" aria-label="Sang phải">▶</button>
+      </div>
+      <button type="button" class="jump" data-key="jump">NHẢY</button>
+    </div>
+  </section>
+
+  <section id="end" class="screen center hidden">
+    <div class="card wide">
+      <h1>🏆 Bảng xếp hạng</h1>
+      <p id="my-rank"></p>
+      <div id="board"></div>
+    </div>
+  </section>
+
+  <div id="notice" class="notice hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/lib/constants.js"></script>
+  <script src="/js/lib/hazards.js"></script>
+  <script src="/js/lib/arena.js"></script>
+  <script src="/js/lib/ui.js"></script>
+  <script src="/js/pages/player.js"></script>
+</body>
+</html>

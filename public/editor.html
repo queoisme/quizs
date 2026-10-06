@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Soạn câu hỏi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/editor.css">
+</head>
+<body>
+  <div class="editor">
+    <aside class="sidebar">
+      <h2>Bộ câu hỏi</h2>
+      <button id="new-quiz" class="btn primary">+ Tạo bộ mới</button>
+      <ul id="quiz-list"></ul>
+      <a href="/host" class="btn ghost">▶ Tổ chức chơi</a>
+      <button id="logout" class="btn ghost" type="button">Đăng xuất</button>
+    </aside>
+
+    <main class="main">
+      <div id="empty" class="empty">Chọn một bộ câu hỏi bên trái hoặc tạo bộ mới.</div>
+      <div id="form" class="form-area hidden">
+        <div class="toolbar">
+          <input id="title" class="title-input" maxlength="100" placeholder="Tên bộ câu hỏi">
+          <button id="save" class="btn primary">Lưu (Ctrl+S)</button>
+          <a id="play" class="btn ghost">▶ Chơi bộ này</a>
+          <button id="delete" class="btn danger">Xoá bộ</button>
+          <span id="status" class="muted"></span>
+        </div>
+        <div id="errors" class="errors hidden"></div>
+        <div id="questions" class="questions"></div>
+        <button id="add-q" class="btn ghost big">+ Thêm câu hỏi</button>
+      </div>
+    </main>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+  <script src="/js/lib/constants.js"></script>
+  <script src="/js/lib/ui.js"></script>
+  <script src="/js/pages/editor.js"></script>
+</body>
+</html>

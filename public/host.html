@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tổ chức chơi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/game.css">
+  <link rel="stylesheet" href="/css/host.css">
+</head>
+<body>
+  <section id="setup" class="screen center">
+    <div class="card wide">
+      <h1>Tổ chức trò chơi</h1>
+      <p class="muted" style="margin:0">Chọn bộ câu hỏi rồi tạo phòng. Người chơi quét mã QR để tham gia.</p>
+      <div id="quiz-list" class="quiz-list"></div>
+      <div class="difficulty">
+        <strong>Thử thách trong trận</strong>
+        <span class="muted">☄️ thiên thạch · 🌬️ gió · 🧊 sàn băng · 🛡️ khiên</span>
+        <div class="seg" role="radiogroup">
+          <label><input type="radio" name="difficulty" value="off"><span>Tắt</span></label>
+          <label><input type="radio" name="difficulty" value="easy"><span>Dễ</span></label>
+          <label><input type="radio" name="difficulty" value="medium" checked><span>Vừa</span></label>
+          <label><input type="radio" name="difficulty" value="hard"><span>Khó</span></label>
+        </div>
+      </div>
+      <p id="setup-error" class="error"></p>
+      <div class="row">
+        <button id="create-room" class="btn primary big" disabled>Tạo phòng</button>
+        <a href="/editor" class="btn ghost">✎ Soạn câu hỏi</a>
+        <button id="logout" class="btn ghost" type="button">Đăng xuất</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="lobby" class="screen hidden">
+    <div class="host-lobby">
+      <div class="join-box">
+        <strong>Quét mã để tham gia</strong>
+        <img id="qr" alt="Mã QR để tham gia phòng">
+        <a id="join-url" target="_blank" rel="noopener"></a>
+        <span class="muted">hoặc nhập mã PIN</span>
+        <div id="pin" class="pin"></div>
+        <small id="lan-hint" class="muted hidden">Điện thoại cần dùng chung mạng Wi-Fi với máy này.</small>
+      </div>
+      <div class="lobby-side">
+        <div>
+          <h1 id="lobby-title"></h1>
+          <span id="lobby-sub" class="muted"></span>
+        </div>
+        <div class="row">
+          <h2><span id="player-count">0</span> người chơi</h2>
+          <button id="start" class="btn primary big" disabled>Bắt đầu ▶</button>
+        </div>
+        <p id="lobby-error" class="error"></p>
+        <div id="players" class="players"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" class="screen hidden">
+    <header class="qbar">
+      <div class="qmeta">
+        <span id="qcount"></span>
+        <span>PIN <span id="corner-pin"></span> · <span id="corner-count">0</span> người chơi</span>
+        <span id="qtimer"></span>
+      </div>
+      <div id="qtext"></div>
+      <div class="timebar"><div id="timefill"></div></div>
+    </header>
+    <div class="stage">
+      <canvas id="arena"></canvas>
+      <div id="banner" class="banner hidden"></div>
+    </div>
+  </section>
+
+  <section id="end" class="screen center hidden">
+    <div class="card wide">
+      <h1>🏆 Bảng xếp hạng</h1>
+      <div id="board"></div>
+      <p id="end-error" class="error"></p>
+      <div class="row">
+        <button id="restart" class="btn primary">↻ Chơi lại</button>
+        <button id="new-game" class="btn ghost">Chọn bộ khác</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="notice" class="notice hidden"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/lib/constants.js"></script>
+  <script src="/js/lib/hazards.js"></script>
+  <script src="/js/lib/arena.js"></script>
+  <script src="/js/lib/ui.js"></script>
+  <script src="/js/pages/host.js"></script>
+</body>
+</html>
